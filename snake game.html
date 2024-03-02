@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Game</title>
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: white; /* Set background color of the body to white */
+    }
+    #game-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: white; /* Set background color of the game container to white */
+        height: 100vh;
+    }
+    #game-board {
+        width: 400px;
+        height: 400px;
+        border: 2px solid #000;
+        position: relative;
+        background-color: #0a192f; /* Set background color of the game board to dark blue */
+    }
+    .snake {
+        width: 20px;
+        height: 20px;
+        background: green url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="5" r="2" fill="brown"/><circle cx="15" cy="15" r="2" fill="brown"/><circle cx="5" cy="10" r="2" fill="brown"/><circle cx="10" cy="10" r="2" fill="black"/></svg>') repeat;
+        position: absolute;
+    }
+    .food {
+        width: 20px;
+        height: 20px;
+        background-color: brown;
+        position: absolute;
+    }
+    
+#scoreboard {
+  font-size: 24px;
+  **color: white !important;**  /* Added !important for emphasis */
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+}
+</style>
+</head>
+<body>
+<div id="game-container">
+    <div id="scoreboard">Score: 0</div>
+    <div id="game-board"></div>
+</div>
+
+<script>
+ document.addEventListener('DOMContentLoaded', () => {
+        const gameBoard = document.getElementById('game-board');
+        const scoreboard = document.getElementById('scoreboard');
+        const gridSize = 20;
+        const boardSize = 400;
+        const snakeSpeed = 150;
+        const specialFoodInterval = 10; // Every 10 points, special food appears
+        const specialFoodDuration = 10; // Special food holds for 10 seconds
+        const specialFoodScore = 5; // Extra points for eating special food
+
+        let snake = [{x: 200, y: 200}];
+        let food = getRandomPosition();
+        let direction = {x: 0, y: 0};
+        let score = 0;
+        let specialFoodTimer = null;
+        let isSpecialFoodActive = false;
+        let interval = null;
+
+        function getRandomPosition() {
+            return {
+                x: Math.floor(Math.random() * (boardSize / gridSize)) * gridSize,
+                y: Math.floor(Math.random() * (boardSize / gridSize)) * gridSize
+            };
+        }
+
+        function draw() {
+            gameBoard.innerHTML = '';
+
+            snake.forEach(segment => {
+                const snakeElement = document.createElement('div');
+                snakeElement.classList.add('snake');
+                snakeElement.style.left = segment.x + 'px';
+                snakeElement.style.top = segment.y + 'px';
+                gameBoard.appendChild(snakeElement);
+            });
+
+            const foodElement = document.createElement('div');
+            foodElement.classList.add('food');
+            foodElement.style.backgroundColor = isSpecialFoodActive ? 'red' : 'brown';
+            foodElement.style.left = food.x + 'px';
+            foodElement.style.top = food.y + 'px';
+            gameBoard.appendChild(foodElement);
+        }
+
+        function move() {
+            const head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+            snake.unshift(head);
+
+            if (head.x === food.x && head.y === food.y) {
+                if (isSpecialFoodActive) {
+                    score += specialFoodScore;
+                    clearInterval(specialFoodTimer);
+                    isSpecialFoodActive = false;
+                } else {
+                    score++;
+                }
+                scoreboard.textContent = 'Score: ' + score;
+                food = getRandomPosition();
+                if (score % specialFoodInterval === 0) {
+                    spawnSpecialFood();
+                }
+            } else {
+                snake.pop();
+            }
+
+            if (head.x < 0 || head.x >= boardSize || head.y < 0 || head.y >= boardSize || collision(head)) {
+                gameOver();
+            }
+
+            draw();
+        }
+
+        function collision(head) {
+            return snake.slice(1).some(segment => segment.x === head.x && segment.y === head.y);
+        }
+
+        function gameOver() {
+            clearInterval(interval);
+            if (specialFoodTimer !== null) {
+                clearInterval(specialFoodTimer);
+            }
+            alert('Game Over! Your Score: ' + score);
+            score = 0; // Reset the score
+            scoreboard.textContent = 'Score: 0'; // Update the scoreboard
+            startGame(); // Start a new game
+        }
+
+        function startGame() {
+            snake = [{x: 200, y: 200}];
+            food = getRandomPosition();
+            direction = {x: 0, y: 0};
+            interval = setInterval(move, snakeSpeed);
+        }
+
+        function spawnSpecialFood() {
+            isSpecialFoodActive = true;
+            const specialFood = getRandomPosition();
+            const foodElement = document.createElement('div');
+            foodElement.classList.add('food');
+            foodElement.style.backgroundColor = 'red';
+            foodElement.style.left = specialFood.x + 'px';
+            foodElement.style.top = specialFood.y + 'px';
+            gameBoard.appendChild(foodElement);
+            specialFoodTimer = setTimeout(() => {
+                isSpecialFoodActive = false;
+                foodElement.remove();
+            }, specialFoodDuration * 1000);
+        }
+
+        function changeDirection(e) {
+            switch (e.keyCode) {
+                case 37:
+                    if (direction.x !== gridSize) {
+                        direction = {x: -gridSize, y: 0};
+                    }
+                    break;
+                case 38:
+                    if (direction.y !== gridSize) {
+                        direction = {x: 0, y: -gridSize};
+                    }
+                    break;
+                case 39:
+                    if (direction.x !== -gridSize) {
+                        direction = {x: gridSize, y: 0};
+                    }
+                    break;
+                case 40:
+                    if (direction.y !== -gridSize) {
+                        direction = {x: 0, y: gridSize};
+                    }
+                    break;
+            }
+        }
+
+        document.addEventListener('keydown', changeDirection);
+        startGame(); // Start the initial game
+    });
+</script>
+</body>
+</html>
